@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <Servo.h>
 
 #define BIN_WIDTH 30
 
@@ -29,12 +30,25 @@ int weight1 = 0;
 int weight2 = 0;
 int volume = 0;
 
+const int servoPin = 8;
+Servo Servo1; // Creating a servo obj
 const int trigPinBottom = 9;
 const int echoPinBottom = 10;
 const int trigPinTop = 11;
 const int echoPinTop = 12;
 
+
+
+
 void setup() {
+  pinMode(trigPinBottom, OUTPUT); 
+  pinMode(echoPinBottom, INPUT);
+  pinMode(trigPinTop, OUTPUT); 
+  pinMode(echoPinTop, INPUT);
+
+  Servo1.attach(servoPin);
+  Servo1.write(0); // initially unlocked
+  Serial.begin(9600);
 }
 
 void loop() {
@@ -49,12 +63,12 @@ void loop() {
         transporterScanned = true;
       }
       if(transporterScanned && facilityScanned){
-        //TODO: Open lock
+        unlockBin();// Open lock
         isLocked = false;
         ownerID = facilityID;
         transporterScanned = facilityScanned = false;
       }
-    } else {
+    } else { // if bin is unlocked, 
       if(IdType == 1 && !facilityScanned && scannerID == facilityID && isWithinLoc(lat, lon)){
         facilityScanned = true;
       }
@@ -62,7 +76,7 @@ void loop() {
         transporterScanned = true;
       }
       if(transporterScanned && facilityScanned && weight1==weight2){
-        //TODO: Open lock
+        lockBin(); // Close lock
         isLocked = true;
         ownerID = transporterID;
         transporterScanned = facilityScanned = false;
@@ -71,6 +85,14 @@ void loop() {
     }
   }
   
+}
+
+void lockBin(){
+  Servo1.write(90);
+}
+
+void unlockBin(){
+  Servo1.write(0);
 }
 
 //TODO: Parse input from bluetooth to get data
