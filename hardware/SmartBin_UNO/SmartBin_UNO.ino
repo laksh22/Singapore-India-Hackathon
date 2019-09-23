@@ -1,5 +1,4 @@
 #include <stdlib.h>
-
 #define BIN_WIDTH 30
 
 struct GeoFence {
@@ -25,8 +24,7 @@ int IdType = 0;
 bool transporterScanned = false;
 bool facilityScanned = false;
 
-int weight1 = 0;
-int weight2 = 0;
+int weight = 0;
 int volume = 0;
 
 const int trigPinBottom = 9;
@@ -53,6 +51,8 @@ void loop() {
         isLocked = false;
         ownerID = facilityID;
         transporterScanned = facilityScanned = false;
+        readWeightSensor();
+        sendUnlockOutput();
       }
     } else {
       if(IdType == 1 && !facilityScanned && scannerID == facilityID && isWithinLoc(lat, lon)){
@@ -61,69 +61,53 @@ void loop() {
       if(IdType == 2 && !transporterScanned && scannerID == transporterID && isWithinLoc(lat, lon)){
         transporterScanned = true;
       }
-      if(transporterScanned && facilityScanned && weight1==weight2){
+      if(transporterScanned && facilityScanned){
         //TODO: Open lock
         isLocked = true;
         ownerID = transporterID;
         transporterScanned = facilityScanned = false;
         volume = calculateVolume();
+        readWeightSensor();
+        sendUnlockOutput();
       }
     }
   }
   
 }
 
-//TODO: Parse input from bluetooth to get data
 void parseInput(char str[]){
   
   //UNLOCKING
   if(str[1] == 'U') {
-    // TUNLOCK#ID_LAT_LON_WEIGHT OR FUNLOCK#ID_LAT_LON_WEIGHT
+    // TUNLOCK#ID_LAT_LON OR FUNLOCK#ID_LAT_LON
     
-    //Transporter is scanning    
-    if(str[0] == 'T'){
-      char *token = strtok(str, "#");
-      //Get scanner ID
-      token = strtok(str, "_");
-      scannerID = atoi(token);
-      //Get current latitude
-      token = strtok(NULL, "_");
-      lat = atof(token);
-      //Get current longitude
-      token = strtok(NULL, "_");
-      lon = atof(token);
-      //Get weight 1
-      token = strtok(NULL, "_");
-      weight1 = atoi(token);
-    }
+    char *token;
+    token = strtok(str, "#");
     
-    //Facility is scanning
-    if(str[0] == 'F'){
-      char *token = strtok(str, "#");
-      //Get scanner ID
-      token = strtok(str, "_");
-      scannerID = atoi(token);
-      //Get current latitude
-      token = strtok(NULL, "_");
-      lat = atof(token);
-      //Get current longitude
-      token = strtok(NULL, "_");
-      lon = atof(token);
-      //Get weight 1
-      token = strtok(NULL, "_");
-      weight2 = atoi(token);
-    }
+    //Get scanner ID
+    token = strtok(NULL, "_");
+    scannerID = atoi(token);
+    //Get current latitude
+    token = strtok(NULL, "_");
+    lat = atof(token);
+    //Get current longitude
+    token = strtok(NULL, "_");
+    lon = atof(token);
   }
   
   //LOCKING
   if(str[1] == 'L'){
-    //TLOCK#ID_LAT_LON_WEIGHT OR FLOCK#ID_LAT_LON_WEIGHT_LAT1_LAT2_LON1_LON2
+    //TLOCK#ID_LAT_LON OR FLOCK#ID_LAT_LON_LAT1_LAT2_LON1_LON2
     
     //Transporter is scanning
     if(str[0] == 'T'){
-      char *token = strtok(str, "#");
+
+      IdType = 2;
+      
+      char *token;
+      token = strtok(str, "#");
       //Get scanner ID
-      token = strtok(str, "_");
+      token = strtok(NULL, "_");
       scannerID = atoi(token);
       //Get current latitude
       token = strtok(NULL, "_");
@@ -131,15 +115,17 @@ void parseInput(char str[]){
       //Get current longitude
       token = strtok(NULL, "_");
       lon = atof(token);
-      //Get weight 1
-      token = strtok(NULL, "_");
-      weight1 = atoi(token);
     }
+    
     //Facility is scanning
     if(str[0] == 'F'){
-      char *token = strtok(str, "#");
+
+      IdType = 1;
+      
+      char *token;
+      token = strtok(str, "#");
       //Get scanner ID
-      token = strtok(str, "_");
+      token = strtok(NULL, "_");
       scannerID = atoi(token);
       //Get current latitude
       token = strtok(NULL, "_");
@@ -147,9 +133,6 @@ void parseInput(char str[]){
       //Get current longitude
       token = strtok(NULL, "_");
       lon = atof(token);
-      //Get weight 1
-      token = strtok(NULL, "_");
-      weight2 = atoi(token);
       //Get geo-fence for destination
       token = strtok(NULL, "_");
       float lat1 = atoi(token);
@@ -164,6 +147,11 @@ void parseInput(char str[]){
   }
 }
 
+//TODO: Set weight to weight sensor measurement
+void readWeightSensor() {
+  
+}
+
 void sendLockOutput() {
   //TODO: Calculate length of output
   //LOCK#OWNERID_VOL_WEIGHT_LAT1_LAT2_LON1_LON2
@@ -174,20 +162,11 @@ void sendLockOutput() {
 
 //TODO: Serial output upon unlocking
 void sendUnlockOutput() {
+  //TODO: Calculate length of output
   //UNLOCK#OWNERID_VOL_WEIGHT
   char output_str[50];
-  sprintf(output_str, "LOCK#%d_%d_%d", ownerID, volume, weight1);
+  sprintf(output_str, "UNLOCK#%d_%d_%d", ownerID, volume, weight1);
   Serial.println(output_str);
-}
-
-// TODO: Find if scanner ID is that of a transporter
-bool isTransporter(int ID) {
-  return false;
-}
-
-// TODO: Find if scanner ID is that of a facility
-bool isFacility(int ID) {
-  return false;
 }
 
 int getSensorDistance(int trigPin, int echoPin){
@@ -227,7 +206,7 @@ void changeValidLoc(float lat1, float lat2, float lon1, float lon2){
   validLoc.lon2 = lon2;
 }
 
-//Check if the scanning location is within ge-fence that is allowed
+//Check if the scanning location is within geo-fence that is allowed
 bool isWithinLoc(float lat, float lon){
   if((validLoc.lat1 <= lat) && 
       (lat <= validLoc.lat2) &&
