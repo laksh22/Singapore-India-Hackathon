@@ -20,7 +20,9 @@ float lon = 0.0;
 
 int ownerID = 0;
 int transporterID = 0;
+int nextTransporterID = 0;
 int facilityID = 0;
+int nextFacilityID = 0;
 int scannerID = 0;
 int IdType = 0;
 
@@ -68,9 +70,10 @@ void loop()
       if (transporterScanned && facilityScanned)
       {
         unlockBin(); // Open lock
-        isLocked = false;
         ownerID = facilityID;
         transporterScanned = facilityScanned = false;
+        transporterID = nextTransporterID;
+        volume = calculateVolume();
         readWeightSensor();
         sendUnlockOutput();
       }
@@ -85,15 +88,15 @@ void loop()
       {
         transporterScanned = true;
       }
-      if (transporterScanned && facilityScanned && weight1 == weight2)
+      if (transporterScanned && facilityScanned)
       {
         lockBin(); // Close lock
-        isLocked = true;
         ownerID = transporterID;
         transporterScanned = facilityScanned = false;
+        facilityID = nextFacilityID;
         volume = calculateVolume();
         readWeightSensor();
-        sendUnlockOutput();
+        sendLockOutput();
       }
     }
   }
@@ -102,11 +105,13 @@ void loop()
 void lockBin()
 {
   Servo1.write(90);
+  isLocked = true;
 }
 
 void unlockBin()
 {
   Servo1.write(0);
+  isLocked = false;
 }
 
 //TODO: Parse input from bluetooth to get data
@@ -116,7 +121,16 @@ void parseInput(char str[])
   //UNLOCKING
   if (str[1] == 'U')
   {
-    // TUNLOCK#ID_LAT_LON OR FUNLOCK#ID_LAT_LON
+    // TUNLOCK#ID_LAT_LON OR FUNLOCK#ID_LAT_LON_TRANSPORTERID
+
+    if (str[0] == 'T')
+    {
+      IdType = 2;
+    }
+    if (str[0] == 'F')
+    {
+      IdType = 1;
+    }
 
     char *token;
     token = strtok(str, "#");
@@ -130,12 +144,15 @@ void parseInput(char str[])
     //Get current longitude
     token = strtok(NULL, "_");
     lon = atof(token);
+    //Get ID of who can collect the bin for transportation
+    token = strtok(NULL, "_");
+    nextTransporterID = atoi(token);
   }
 
   //LOCKING
   if (str[1] == 'L')
   {
-    //TLOCK#ID_LAT_LON OR FLOCK#ID_LAT_LON_LAT1_LAT2_LON1_LON2
+    //TLOCK#ID_LAT_LON OR FLOCK#ID_LAT_LON_LAT1_LAT2_LON1_LON2_FACILITYID
 
     //Transporter is scanning
     if (str[0] == 'T')
@@ -182,6 +199,9 @@ void parseInput(char str[])
       float lon1 = atoi(token);
       token = strtok(NULL, "_");
       float lon2 = atoi(token);
+      //Get ID of destination facility
+      token = strtok(NULL, "_");
+      nextFacilityID = atoi(token);
       changeValidLoc(lat1, lat2, lon1, lon2);
     }
   }
@@ -197,17 +217,16 @@ void sendLockOutput()
   //TODO: Calculate length of output
   //LOCK#OWNERID_VOL_WEIGHT_LAT1_LAT2_LON1_LON2
   char output_str[50];
-  sprintf(output_str, "LOCK#%d_%d_%d_%f_%f_%f_%f", ownerID, volume, weight1, validLoc.lat1, validLoc.lat2, validLoc.lon1, validLoc.lon2);
+  sprintf(output_str, "LOCK#%d_%d_%d_%f_%f_%f_%f", ownerID, volume, weight, validLoc.lat1, validLoc.lat2, validLoc.lon1, validLoc.lon2);
   Serial.println(output_str);
 }
 
-//TODO: Serial output upon unlocking
 void sendUnlockOutput()
 {
   //TODO: Calculate length of output
   //UNLOCK#OWNERID_VOL_WEIGHT
   char output_str[50];
-  sprintf(output_str, "UNLOCK#%d_%d_%d", ownerID, volume, weight1);
+  sprintf(output_str, "UNLOCK#%d_%d_%d", ownerID, volume, weight);
   Serial.println(output_str);
 }
 
@@ -223,7 +242,6 @@ int getSensorDistance(int trigPin, int echoPin)
   int duration = pulseIn(echoPin, HIGH);
   // Calculating the distance
   int distance = duration * 0.034 / 2;
-  // Prints the distance on the Serial Monitor
   return distance;
 }
 
@@ -242,10 +260,7 @@ int calculateVolume()
       return 1;
     }
   }
-  else
-  {
-    return 0;
-  }
+  return 0;
 }
 
 //Change destination where bin can be locked or unlocked
@@ -267,8 +282,5 @@ bool isWithinLoc(float lat, float lon)
   {
     return true;
   }
-  else
-  {
-    return false;
-  }
+  return false;
 }
