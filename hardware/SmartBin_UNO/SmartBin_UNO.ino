@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <Servo.h>
+#include "HX711.h" // have to install this library in Tools>Manage Libraries
 
 #define BIN_WIDTH 30
 
@@ -29,8 +30,8 @@ int IdType = 0;
 bool transporterScanned = false;
 bool facilityScanned = false;
 
-int weight = 0;
-int volume = 0;
+float weight = 0;
+float volume = 0;
 
 const int servoPin = 8;
 Servo Servo1; // Creating a servo obj
@@ -39,6 +40,11 @@ const int echoPinBottom = 10;
 const int trigPinTop = 11;
 const int echoPinTop = 12;
 
+#define calibration_factor -7050.0 //This value is obtained using the SparkFun_HX711_Calibration sketch
+#define DOUT  5
+#define CLK  6
+HX711 scale;
+
 void setup()
 {
   pinMode(trigPinBottom, OUTPUT);
@@ -46,8 +52,13 @@ void setup()
   pinMode(trigPinTop, OUTPUT);
   pinMode(echoPinTop, INPUT);
 
+  //servo setup
   Servo1.attach(servoPin);
   Servo1.write(0); // initially unlocked
+
+  scale.begin(DOUT, CLK);
+  scale.set_scale(calibration_factor); //This value is obtained by using the SparkFun_HX711_Calibration sketch
+  scale.tare(); //Assuming there is no weight on the scale at start up, reset the scale to 0
   Serial.begin(9600);
 }
 
@@ -208,8 +219,10 @@ void parseInput(char str[])
 }
 
 //TODO: Set weight to weight sensor measurement
-void readWeightSensor()
-{
+void readWeightSensor(){
+  float weightInLbs = scale.get_units();
+  float weightInKg = weightInLbs * 0.453592;
+  weight = weightInKg;
 }
 
 void sendLockOutput()
