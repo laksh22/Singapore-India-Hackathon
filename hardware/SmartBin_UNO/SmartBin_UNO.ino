@@ -2,7 +2,10 @@
 #include <Servo.h>
 #include "HX711.h" // have to install this library in Tools>Manage Libraries
 
+//TODO: Set actual parameters in cm
 #define BIN_WIDTH 30
+#define BIN_HEIGHT 30
+#define BIN_LENGTH 30
 
 struct GeoFence
 {
@@ -35,22 +38,22 @@ float volume = 0;
 
 const int servoPin = 8;
 Servo Servo1; // Creating a servo obj
-const int trigPinBottom = 9;
-const int echoPinBottom = 10;
-const int trigPinTop = 11;
-const int echoPinTop = 12;
+const int trigPinLeft = 9;
+const int echoPinLeft = 10;
+const int trigPinRight = 11;
+const int echoPinRight = 12;
 
 #define calibration_factor -7050.0 //This value is obtained using the SparkFun_HX711_Calibration sketch
-#define DOUT  5
-#define CLK  6
+#define DOUT 5
+#define CLK 6
 HX711 scale;
 
 void setup()
 {
-  pinMode(trigPinBottom, OUTPUT);
-  pinMode(echoPinBottom, INPUT);
-  pinMode(trigPinTop, OUTPUT);
-  pinMode(echoPinTop, INPUT);
+  pinMode(trigPinLeft, OUTPUT);
+  pinMode(echoPinLeft, INPUT);
+  pinMode(trigPinRight, OUTPUT);
+  pinMode(echoPinRight, INPUT);
 
   //servo setup
   Servo1.attach(servoPin);
@@ -58,7 +61,7 @@ void setup()
 
   scale.begin(DOUT, CLK);
   scale.set_scale(calibration_factor); //This value is obtained by using the SparkFun_HX711_Calibration sketch
-  scale.tare(); //Assuming there is no weight on the scale at start up, reset the scale to 0
+  scale.tare();                        //Assuming there is no weight on the scale at start up, reset the scale to 0
   Serial.begin(9600);
 }
 
@@ -125,7 +128,6 @@ void unlockBin()
   isLocked = false;
 }
 
-//TODO: Parse input from bluetooth to get data
 void parseInput(char str[])
 {
 
@@ -219,7 +221,8 @@ void parseInput(char str[])
 }
 
 //TODO: Set weight to weight sensor measurement
-void readWeightSensor(){
+void readWeightSensor()
+{
   float weightInLbs = scale.get_units();
   float weightInKg = weightInLbs * 0.453592;
   weight = weightInKg;
@@ -227,7 +230,6 @@ void readWeightSensor(){
 
 void sendLockOutput()
 {
-  //TODO: Calculate length of output
   //LOCK#OWNERID_VOL_WEIGHT_LAT1_LAT2_LON1_LON2
   char output_str[50];
   sprintf(output_str, "LOCK#%d_%d_%d_%f_%f_%f_%f", ownerID, volume, weight, validLoc.lat1, validLoc.lat2, validLoc.lon1, validLoc.lon2);
@@ -236,7 +238,6 @@ void sendLockOutput()
 
 void sendUnlockOutput()
 {
-  //TODO: Calculate length of output
   //UNLOCK#OWNERID_VOL_WEIGHT
   char output_str[50];
   sprintf(output_str, "UNLOCK#%d_%d_%d", ownerID, volume, weight);
@@ -260,20 +261,10 @@ int getSensorDistance(int trigPin, int echoPin)
 
 int calculateVolume()
 {
-  int bottomPin = getSensorDistance(trigPinBottom, echoPinBottom);
-  int topPin = getSensorDistance(trigPinTop, echoPinTop);
-  if (bottomPin < BIN_WIDTH)
-  {
-    if (topPin < BIN_WIDTH)
-    {
-      return 2;
-    }
-    else
-    {
-      return 1;
-    }
-  }
-  return 0;
+  int leftPinDistance = getSensorDistance(trigPinLeft, echoPinLeft);
+  int rightPinDistance = getSensorDistance(trigPinRight, echoPinRight);
+  int currentVol = BIN_LENGTH*BIN_WIDTH*(BIN_HEIGHT-((leftPinDistance + rightPinDistance)/2);
+  return currentVol;
 }
 
 //Change destination where bin can be locked or unlocked
