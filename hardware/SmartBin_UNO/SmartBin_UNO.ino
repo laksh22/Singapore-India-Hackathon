@@ -66,8 +66,8 @@ void loop()
 {
   if (Serial.available() > 0)
   {
-    //TODO: Make function to get full input before parsing
-    parseInput("Sample Text");
+    String inputText = Serial.readString();
+    parseInput(inputText);
     if (isLocked)
     {
       if (IdType == 1 && !facilityScanned && scannerID == facilityID && isWithinLoc(lat, lon) && calculateVolume() == volume)
