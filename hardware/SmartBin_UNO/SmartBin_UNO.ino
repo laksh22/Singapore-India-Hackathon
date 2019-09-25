@@ -44,8 +44,8 @@ const int trigPinRight = 11;
 const int echoPinRight = 12;
 
 #define calibration_factor -7050.0 //This value is obtained using the SparkFun_HX711_Calibration sketch
-#define DOUT  5
-#define CLK  6
+#define DOUT 5
+#define CLK 6
 HX711 scale;
 
 void setup()
@@ -61,7 +61,7 @@ void setup()
 
   scale.begin(DOUT, CLK);
   scale.set_scale(calibration_factor); //This value is obtained by using the SparkFun_HX711_Calibration sketch
-  scale.tare(); //Assuming there is no weight on the scale at start up, reset the scale to 0
+  scale.tare();                        //Assuming there is no weight on the scale at start up, reset the scale to 0
   Serial.begin(9600);
 }
 
@@ -221,7 +221,8 @@ void parseInput(char str[])
 }
 
 //TODO: Set weight to weight sensor measurement
-void readWeightSensor(){
+void readWeightSensor()
+{
   float weightInLbs = scale.get_units();
   float weightInKg = weightInLbs * 0.453592;
   weight = weightInKg;
