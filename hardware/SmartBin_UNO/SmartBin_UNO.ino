@@ -220,7 +220,6 @@ void parseInput(char str[])
   }
 }
 
-//TODO: Set weight to weight sensor measurement
 void readWeightSensor()
 {
   float weightInLbs = scale.get_units();
