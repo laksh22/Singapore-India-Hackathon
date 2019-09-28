@@ -16,7 +16,7 @@ struct GeoFence
   float radius; //Radius in degrees from the center
 };
 
-GeoFence validLoc = {0.000000, 0.000000, 200.000000};
+GeoFence validLoc = {12.000000, 80.000000, 30.000000};
 
 bool isLocked = false;
 
@@ -71,19 +71,30 @@ void loop()
   if (Serial.available() > 0)
   {
     String inputText = Serial.readString();
-    Serial.println(inputText); //DEBUG
+    inputText.trim();
+//    Serial.println(inputText); //DEBUG
     parseInput(inputText.c_str());
     if (isLocked)
     {
-      if (IdType == 1 && !facilityScanned && scannerID == facilityID && isWithinLoc(lat, lon) && calculateVolume() == volume)
+//      Serial.println("===UNLOCK DEBUG==");
+//      Serial.println(IdType);
+//      Serial.println("FACILITY:");
+//      Serial.println(!facilityScanned);
+//      Serial.println(scannerID == facilityID);
+//      Serial.println("TRANSPORTER:");
+//      Serial.println(!transporterScanned);
+//      Serial.println(scannerID == transporterID);
+//      Serial.println(isWithinLoc(lat, lon));
+//      Serial.println(calculateVolume() == volume);
+      if (IdType == 1 && !facilityScanned && scannerID == facilityID && isWithinLoc(lat, lon) /**&& calculateVolume() == volume*/)
       {
         facilityScanned = true;
-        Serial.println("F Scan"); //DEBUG
+//        Serial.println("F Scan"); //DEBUG
       }
-      if (IdType == 2 && !transporterScanned && scannerID == transporterID && isWithinLoc(lat, lon) && calculateVolume() == volume)
+      if (IdType == 2 && !transporterScanned && scannerID == transporterID && isWithinLoc(lat, lon) /**&& calculateVolume() == volume*/)
       {
         transporterScanned = true;
-        Serial.println("T Scan"); //DEBUG
+//        Serial.println("T Scan"); //DEBUG
       }
       if (transporterScanned && facilityScanned)
       {
@@ -98,19 +109,28 @@ void loop()
     }
     else
     { // if bin is unlocked,
+//      Serial.println("===LOCK DEBUG==");
+//      Serial.println(IdType);
+//      Serial.println("FACILITY:");
+//      Serial.println(!facilityScanned);
+//      Serial.println(scannerID == facilityID);
+//      Serial.println("TRANSPORTER:");
+//      Serial.println(!transporterScanned);
+//      Serial.println(scannerID == transporterID);
+//      Serial.println(isWithinLoc(lat, lon));
       if (IdType == 1 && !facilityScanned && scannerID == facilityID && isWithinLoc(lat, lon))
       {
         facilityScanned = true;
-        Serial.println("F Scan"); //DEBUG
+//        Serial.println("F Scan"); //DEBUG
       }
       if (IdType == 2 && !transporterScanned && scannerID == transporterID && isWithinLoc(lat, lon))
       {
         transporterScanned = true;
-        Serial.println("T Scan"); //DEBUG
+//        Serial.println("T Scan"); //DEBUG
       }
       if (transporterScanned && facilityScanned)
       {
-        Serial.println("LOCKING"); //DEBUG
+//        Serial.println("LOCKING"); //DEBUG
         lockBin();                 // Close lock
         ownerID = transporterID;
         transporterScanned = facilityScanned = false;
@@ -158,22 +178,22 @@ void parseInput(char str[])
     //Get scanner ID
     token = strtok(NULL, "_");
     scannerID = atoi(token);
-    Serial.println(scannerID);
+//    Serial.println(scannerID);
     //Get current latitude
     token = strtok(NULL, "_");
     lat = atof(token);
-    Serial.println(lat);
+//    Serial.println(lat, 6);
     //Get current longitude
     token = strtok(NULL, "_");
     lon = atof(token);
-    Serial.println(lon);
+//    Serial.println(lon);
 
     if (IdType == 2)
     {
       //Get ID of who can collect the bin for transportation
       token = strtok(NULL, "_");
       nextTransporterID = atoi(token);
-      Serial.println(nextTransporterID);
+//      Serial.println(nextTransporterID);
     }
   }
 
@@ -193,15 +213,15 @@ void parseInput(char str[])
       //Get scanner ID
       token = strtok(NULL, "_");
       scannerID = atoi(token);
-      Serial.println(scannerID);
+//      Serial.println(scannerID);
       //Get current latitude
       token = strtok(NULL, "_");
       lat = atof(token);
-      Serial.println(lat);
+//      Serial.println(lat);
       //Get current longitude
       token = strtok(NULL, "_");
       lon = atof(token);
-      Serial.println(lat);
+//      Serial.println(lat);
     }
 
     //Facility is scanning
@@ -215,29 +235,29 @@ void parseInput(char str[])
       //Get scanner ID
       token = strtok(NULL, "_");
       scannerID = atoi(token);
-      Serial.println(scannerID);
+//      Serial.println(scannerID);
       //Get current latitude
       token = strtok(NULL, "_");
       lat = atof(token);
-      Serial.println(lat);
+//      Serial.println(lat);
       //Get current longitude
       token = strtok(NULL, "_");
       lon = atof(token);
-      Serial.println(lon);
+//      Serial.println(lon);
       //Get geo-fence for destination
       token = strtok(NULL, "_");
       float x = atoi(token);
       token = strtok(NULL, "_");
-      Serial.println(x);
+//      Serial.println(x);
       float y = atoi(token);
-      Serial.println(y);
+//      Serial.println(y);
       token = strtok(NULL, "_");
       float radius = atoi(token);
-      Serial.println(radius);
+//      Serial.println(radius);
       //Get ID of destination facility
       token = strtok(NULL, "_");
       nextFacilityID = atoi(token);
-      Serial.println(nextFacilityID);
+//      Serial.println(nextFacilityID);
       changeValidLoc(x, y, radius);
     }
   }
@@ -248,29 +268,30 @@ float readWeightSensor()
   float weightInLbs = scale.get_units();
   float weightInKg = weightInLbs * 0.453592;
   weight = weightInKg;
-  Serial.print("weight:"); //DEBUG
-  Serial.println(weight);  //DEBUG
-  return weight
+//  Serial.print("weight:"); //DEBUG
+//  Serial.println(weight);  //DEBUG
+  return weight;
 }
 
 void sendLockOutput()
 {
   //LOCK#OWNERID_VOL_WEIGHT
-  char output_str[50];
-  sprintf(output_str, "LOCK#%d_%d_%d_%f_%f_%f_%f", ownerID, volume, weight, validLoc.lat1, validLoc.lat2, validLoc.lon1, validLoc.lon2);
+  char output_str[400];
+  int outputVol = volume*1000;
+  sprintf(output_str, "LOCK#%d_%s_%s_%s_%s_%s", ownerID, String(volume).c_str(), String(weight).c_str(), String(validLoc.x).c_str(), String(validLoc.y).c_str(), String(validLoc.radius).c_str());
   Serial.println(output_str);
 
-  Serial.println(volume);        //DEBUG
-  Serial.println(weight);        //DEBUG
-  Serial.println(validLoc.lat1); //DEBUG
-  Serial.println(output_str);    //DEBUG
+//  Serial.println(volume);        //DEBUG
+//  Serial.println(weight);        //DEBUG
+//  Serial.println(validLoc.lat1); //DEBUG
+//  Serial.println(output_str);    //DEBUG
 }
 
 void sendUnlockOutput()
 {
   //UNLOCK#OWNERID_VOL_WEIGHT
   char output_str[50];
-  sprintf(output_str, "UNLOCK#%d_%f_%f", ownerID, volume, weight);
+  sprintf(output_str, "UNLOCK#%d_%s_%s", ownerID, String(volume).c_str(), String(weight).c_str());
   Serial.println(output_str);
 }
 
@@ -293,6 +314,8 @@ float calculateVolume()
 {
   int leftPinDistance = getSensorDistance(trigPinLeft, echoPinLeft);
   int rightPinDistance = getSensorDistance(trigPinRight, echoPinRight);
+//  Serial.println("In volume fn,");
+//  Serial.println((leftPinDistance + rightPinDistance) / 2);
   float currentVol = BIN_LENGTH * BIN_WIDTH * (BIN_HEIGHT - ((leftPinDistance + rightPinDistance) / 2));
   return currentVol;
 }
@@ -311,6 +334,8 @@ bool isWithinLoc(float lat, float lon)
   float d1 = lat - validLoc.x;
   float d2 = lon - validLoc.y;
   float distance = sqrt((d1 * d1) + (d2 * d2));
+//  Serial.println(distance);
+//  Serial.println(validLoc.radius);
   if (distance < validLoc.radius)
   {
     return true;
